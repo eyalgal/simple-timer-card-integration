@@ -1,4 +1,4 @@
-<img src="custom_components/simple_timer_card/brand/icon@2x.png" width="96" alt="Simple Timer Card Integration icon" align="right" />
+<img src="custom_components/simple_timer_card/brand/icon@2x.png" width="64" alt="Simple Timer Card Integration icon" align="right" />
 
 # Simple Timer Card Integration
 
