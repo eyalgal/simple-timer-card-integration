@@ -1,3 +1,5 @@
+<img src="custom_components/simple_timer_card/brand/icon@2x.png" width="96" alt="Simple Timer Card Integration icon" align="right" />
+
 # Simple Timer Card Integration
 
 Server-side timers for Home Assistant, built for the
