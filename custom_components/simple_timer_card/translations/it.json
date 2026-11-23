@@ -55,6 +55,18 @@
     },
     "no_tts": {
       "message": "Nessun motore di sintesi vocale disponibile per annunciare su {entity_id}."
+    },
+    "actions_not_allowed": {
+      "message": "Solo gli amministratori possono programmare passaggi di script diversi dalle chiamate ad azioni."
+    },
+    "too_many_timers": {
+      "message": "Puoi avere al massimo {max} timer in funzione."
+    },
+    "metadata_too_large": {
+      "message": "I dati aggiuntivi del timer sono troppo grandi."
+    },
+    "duration_too_long": {
+      "message": "Un timer può durare al massimo {days} giorni."
     }
   },
   "selector": {

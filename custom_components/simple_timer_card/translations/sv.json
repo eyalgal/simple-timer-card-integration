@@ -55,6 +55,18 @@
     },
     "no_tts": {
       "message": "Ingen text-till-tal finns för att meddela på {entity_id}."
+    },
+    "actions_not_allowed": {
+      "message": "Endast administratörer kan schemalägga andra skriptsteg än åtgärdsanrop."
+    },
+    "too_many_timers": {
+      "message": "Du kan ha högst {max} timrar igång."
+    },
+    "metadata_too_large": {
+      "message": "Timerns extra data är för stor."
+    },
+    "duration_too_long": {
+      "message": "En timer kan som längst gå i {days} dagar."
     }
   },
   "selector": {

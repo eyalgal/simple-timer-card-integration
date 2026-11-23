@@ -55,6 +55,18 @@
     },
     "no_tts": {
       "message": "Brak silnika zamiany tekstu na mowę do ogłoszenia na {entity_id}."
+    },
+    "actions_not_allowed": {
+      "message": "Tylko administratorzy mogą planować kroki skryptu inne niż wywołania akcji."
+    },
+    "too_many_timers": {
+      "message": "Możesz mieć najwyżej {max} działających minutników."
+    },
+    "metadata_too_large": {
+      "message": "Dodatkowe dane minutnika są zbyt duże."
+    },
+    "duration_too_long": {
+      "message": "Minutnik może działać najwyżej {days} dni."
     }
   },
   "selector": {

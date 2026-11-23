@@ -55,14 +55,18 @@ def _usable_engine(hass: HomeAssistant, engine: str | None) -> bool:
     return True
 
 
-def tts_choice(hass: HomeAssistant) -> tuple[str | None, dict[str, Any]]:
-    """The preferred pipeline's voice, else any usable TTS entity."""
+def _preferred_pipeline(hass: HomeAssistant) -> Any:
     try:
         from homeassistant.components import assist_pipeline
 
-        pipeline = assist_pipeline.async_get_pipeline(hass)
+        return assist_pipeline.async_get_pipeline(hass)
     except Exception:  # noqa: BLE001 - assist_pipeline not loaded
-        pipeline = None
+        return None
+
+
+def tts_choice(hass: HomeAssistant) -> tuple[str | None, dict[str, Any]]:
+    """The preferred pipeline's voice, else any usable TTS entity."""
+    pipeline = _preferred_pipeline(hass)
     if pipeline is not None and _usable_engine(hass, pipeline.tts_engine):
         extra: dict[str, Any] = {}
         if pipeline.tts_language:

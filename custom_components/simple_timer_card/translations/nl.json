@@ -55,6 +55,18 @@
     },
     "no_tts": {
       "message": "Er is geen tekst-naar-spraak beschikbaar om om te roepen op {entity_id}."
+    },
+    "actions_not_allowed": {
+      "message": "Alleen beheerders kunnen andere scriptstappen dan actieaanroepen plannen."
+    },
+    "too_many_timers": {
+      "message": "Je kunt hoogstens {max} lopende timers hebben."
+    },
+    "metadata_too_large": {
+      "message": "De extra gegevens van de timer zijn te groot."
+    },
+    "duration_too_long": {
+      "message": "Een timer kan hoogstens {days} dagen lopen."
     }
   },
   "selector": {

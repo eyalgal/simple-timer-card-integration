@@ -13,6 +13,34 @@ from homeassistant.helpers.script import Script, async_validate_actions_config
 from .const import DOMAIN
 from .timers import TimerItem
 
+# A non-admin may only schedule plain action calls, the same things they can
+# call directly. Script steps such as event, wait_for_trigger or choose would
+# let them do what Home Assistant keeps for admins (execute_script).
+_PLAIN_STEP_KEYS = {"action", "service", "target", "data", "entity_id", "alias", "continue_on_error", "enabled", "metadata"}
+
+
+def _plain_action_calls(actions: list[Any]) -> bool:
+    return all(
+        isinstance(step, dict) and ("action" in step or "service" in step) and not set(step) - _PLAIN_STEP_KEYS
+        for step in actions
+    )
+
+
+async def async_action_denied(hass: HomeAssistant, user_id: str | None, actions: list[Any] | None) -> str | None:
+    """Why this user may not run these actions, or None when allowed.
+
+    Calls without a user (automations, voice satellites) are trusted, as in
+    Home Assistant itself.
+    """
+    if user_id is None:
+        return None
+    user = await hass.auth.async_get_user(user_id)
+    if user is None or not user.is_active:
+        return "the user who started it is no longer active"
+    if user.is_admin or not actions or _plain_action_calls(actions):
+        return None
+    return "only administrators can schedule script steps other than action calls"
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -90,6 +118,12 @@ async def async_build_action(
         return action
     if actions:
         validated = await async_validate_actions_config(hass, cv.SCRIPT_SCHEMA(actions))
+        if await async_action_denied(hass, context.user_id if context else None, validated):
+            raise ServiceValidationError(
+                "Only administrators can schedule script steps other than action calls",
+                translation_domain=DOMAIN,
+                translation_key="actions_not_allowed",
+            )
         return {"type": "actions", "actions": validated}
     return None
 
@@ -97,6 +131,11 @@ async def async_build_action(
 async def async_run_action(hass: HomeAssistant, timer: TimerItem) -> str:
     """Run a finished timer's action as the user who created it."""
     action = timer.action or {}
+    # Checked again when it runs: the owner may have been removed or demoted.
+    denied = await async_action_denied(hass, timer.user_id, action.get("actions") if action.get("type") == "actions" else None)
+    if denied:
+        _LOGGER.warning("Timer %s action skipped: %s", timer.name or timer.timer_id, denied)
+        return f"skipped: {denied}"
     context = Context(user_id=timer.user_id)
     if action.get("type") == "command":
         from homeassistant.components.conversation import async_converse  # noqa: PLC0415

@@ -55,6 +55,18 @@
     },
     "no_tts": {
       "message": "אין מנוע הקראה זמין להכרזה ב-{entity_id}."
+    },
+    "actions_not_allowed": {
+      "message": "רק מנהלים יכולים לתזמן שלבי סקריפט שאינם קריאות לפעולות."
+    },
+    "too_many_timers": {
+      "message": "אפשר להפעיל לכל היותר {max} טיימרים בו-זמנית."
+    },
+    "metadata_too_large": {
+      "message": "הנתונים הנוספים של הטיימר גדולים מדי."
+    },
+    "duration_too_long": {
+      "message": "טיימר יכול לפעול לכל היותר {days} ימים."
     }
   },
   "selector": {

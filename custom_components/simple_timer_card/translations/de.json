@@ -55,6 +55,18 @@
     },
     "no_tts": {
       "message": "Keine Sprachausgabe verfügbar, um auf {entity_id} anzusagen."
+    },
+    "actions_not_allowed": {
+      "message": "Nur Administratoren können andere Skriptschritte als Aktionsaufrufe planen."
+    },
+    "too_many_timers": {
+      "message": "Es können höchstens {max} Timer gleichzeitig laufen."
+    },
+    "metadata_too_large": {
+      "message": "Die Zusatzdaten des Timers sind zu groß."
+    },
+    "duration_too_long": {
+      "message": "Ein Timer kann höchstens {days} Tage laufen."
     }
   },
   "selector": {

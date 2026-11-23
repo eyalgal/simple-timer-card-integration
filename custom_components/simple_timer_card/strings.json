@@ -55,6 +55,18 @@
     },
     "no_tts": {
       "message": "No text-to-speech engine is available to announce on {entity_id}."
+    },
+    "actions_not_allowed": {
+      "message": "Only administrators can schedule script steps other than action calls."
+    },
+    "too_many_timers": {
+      "message": "You can have at most {max} running timers."
+    },
+    "metadata_too_large": {
+      "message": "The timer's extra data is too large."
+    },
+    "duration_too_long": {
+      "message": "A timer can run for at most {days} days."
     }
   },
   "selector": {

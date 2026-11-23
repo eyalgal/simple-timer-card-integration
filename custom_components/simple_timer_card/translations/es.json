@@ -55,6 +55,18 @@
     },
     "no_tts": {
       "message": "No hay ningún motor de texto a voz para anunciar en {entity_id}."
+    },
+    "actions_not_allowed": {
+      "message": "Solo los administradores pueden programar pasos de script que no sean llamadas a acciones."
+    },
+    "too_many_timers": {
+      "message": "Puedes tener como máximo {max} temporizadores en marcha."
+    },
+    "metadata_too_large": {
+      "message": "Los datos adicionales del temporizador son demasiado grandes."
+    },
+    "duration_too_long": {
+      "message": "Un temporizador puede durar como máximo {days} días."
     }
   },
   "selector": {

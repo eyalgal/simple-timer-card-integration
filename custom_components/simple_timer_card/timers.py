@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+import json
 import logging
 from typing import Any
 
@@ -18,6 +19,9 @@ from .const import (
     DOMAIN,
     EVENT_TIMER,
     MAX_ARCHIVED_TIMERS,
+    MAX_DURATION_DAYS,
+    MAX_METADATA_BYTES,
+    MAX_TIMERS,
     STORAGE_VERSION,
     TimerEventType,
     TimerStatus,
@@ -30,6 +34,26 @@ TimerListener = Callable[[TimerEventType, "TimerItem", "float | None"], None]
 
 def _iso(value: datetime | None) -> str | None:
     return value.isoformat() if value else None
+
+
+_PUBLIC_STEP_KEYS = ("action", "service", "target", "entity_id", "alias")
+_PUBLIC_DATA_KEYS = ("entity_id", "media_player_entity_id")
+
+
+def _public_action(action: dict[str, Any] | None) -> dict[str, Any] | None:
+    """What dashboards need to describe an action, without its service data."""
+    if not action or action.get("type") != "actions":
+        return action
+    steps = []
+    for step in action.get("actions") or []:
+        if not isinstance(step, dict):
+            continue
+        public = {key: step[key] for key in _PUBLIC_STEP_KEYS if key in step}
+        data = step.get("data")
+        if isinstance(data, dict) and (kept := {key: data[key] for key in _PUBLIC_DATA_KEYS if key in data}):
+            public["data"] = kept
+        steps.append(public)
+    return {**action, "actions": steps}
 
 
 def _parse(value: Any) -> datetime | None:
@@ -83,7 +107,7 @@ class TimerItem:
             ),
             "ended_at": _iso(self.ended_at),
             "remaining": self.remaining_at(now).total_seconds(),
-            "action": self.action,
+            "action": _public_action(self.action),
             "action_result": self.action_result,
             "source": self.source,
             "icon": self.icon,
@@ -252,8 +276,17 @@ class TimerList:
         context: Context | None = None,
     ) -> TimerItem:
         """Create and start a timer."""
-        if duration.total_seconds() <= 0:
-            raise ServiceValidationError("The duration must be positive", translation_domain=DOMAIN, translation_key="invalid_duration")
+        self._check_duration(duration)
+        running = sum(t.status in (TimerStatus.ACTIVE, TimerStatus.PAUSED) for t in self.timers.values())
+        if running >= MAX_TIMERS:
+            raise ServiceValidationError(
+                "Too many timers", translation_domain=DOMAIN, translation_key="too_many_timers",
+                translation_placeholders={"max": str(MAX_TIMERS)},
+            )
+        if metadata and len(json.dumps(metadata, default=str)) > MAX_METADATA_BYTES:
+            raise ServiceValidationError(
+                "Timer metadata is too large", translation_domain=DOMAIN, translation_key="metadata_too_large",
+            )
         now = dt_util.utcnow()
         timer = TimerItem(
             timer_id=ulid_util.ulid_now(),
@@ -274,6 +307,16 @@ class TimerList:
         self._schedule(timer)
         self._notify(TimerEventType.CREATED, timer)
         return timer
+
+    @staticmethod
+    def _check_duration(duration: timedelta) -> None:
+        if duration.total_seconds() <= 0:
+            raise ServiceValidationError("The duration must be positive", translation_domain=DOMAIN, translation_key="invalid_duration")
+        if duration > timedelta(days=MAX_DURATION_DAYS):
+            raise ServiceValidationError(
+                "The duration is too long", translation_domain=DOMAIN, translation_key="duration_too_long",
+                translation_placeholders={"days": str(MAX_DURATION_DAYS)},
+            )
 
     def _get(self, timer_id: str) -> TimerItem:
         if (timer := self.timers.get(timer_id)) is None:
@@ -320,11 +363,13 @@ class TimerList:
         self._notify(TimerEventType.CANCELLED, timer)
         self._prune_archive()
 
-    async def async_finish(self, timer_id: str) -> None:
-        """Finish a timer now, running its action."""
+    async def async_finish(self, timer_id: str, *, user_id: str | None = None) -> None:
+        """Finish a timer now, running its action as the user who finished it."""
         timer = self._get(timer_id)
         if timer.status not in (TimerStatus.ACTIVE, TimerStatus.PAUSED):
             return
+        if user_id:
+            timer.user_id = user_id
         self._finish(timer, run_action=True)
 
     async def async_add_time(self, timer_id: str, delta: timedelta) -> None:
@@ -345,12 +390,21 @@ class TimerList:
         timer.total_duration = max(timer.total_duration, remaining)
         self._notify(TimerEventType.TIME_CHANGED, timer, delta.total_seconds())
 
-    async def async_restart(self, timer_id: str, duration: timedelta | None = None) -> None:
-        """Run a timer again, keeping its name and action (used for snooze)."""
+    async def async_restart(
+        self, timer_id: str, duration: timedelta | None = None, *, user_id: str | None = None
+    ) -> None:
+        """Run a timer again, keeping its name and action (used for snooze).
+
+        The user who restarts it becomes its owner, so its action never runs
+        with someone else's rights. A cancelled timer stays cancelled.
+        """
         timer = self._get(timer_id)
+        if timer.status == TimerStatus.CANCELLED:
+            return
         length = duration or timer.created_duration
-        if length.total_seconds() <= 0:
-            raise ServiceValidationError("The duration must be positive", translation_domain=DOMAIN, translation_key="invalid_duration")
+        self._check_duration(length)
+        if user_id:
+            timer.user_id = user_id
         now = dt_util.utcnow()
         timer.status = TimerStatus.ACTIVE
         timer.finishes_at = now + length

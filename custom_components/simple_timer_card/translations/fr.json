@@ -55,6 +55,18 @@
     },
     "no_tts": {
       "message": "Aucun moteur de synthèse vocale n'est disponible pour annoncer sur {entity_id}."
+    },
+    "actions_not_allowed": {
+      "message": "Seuls les administrateurs peuvent planifier des étapes de script autres que des appels d'action."
+    },
+    "too_many_timers": {
+      "message": "Vous pouvez avoir au plus {max} minuteurs en cours."
+    },
+    "metadata_too_large": {
+      "message": "Les données supplémentaires du minuteur sont trop volumineuses."
+    },
+    "duration_too_long": {
+      "message": "Un minuteur peut durer au plus {days} jours."
     }
   },
   "selector": {

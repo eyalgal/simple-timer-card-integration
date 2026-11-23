@@ -55,6 +55,18 @@
     },
     "no_tts": {
       "message": "Ingen tekst-til-tale er tilgængelig til at annoncere på {entity_id}."
+    },
+    "actions_not_allowed": {
+      "message": "Kun administratorer kan planlægge andre scripttrin end handlingskald."
+    },
+    "too_many_timers": {
+      "message": "Du kan højst have {max} kørende timere."
+    },
+    "metadata_too_large": {
+      "message": "Timerens ekstra data er for store."
+    },
+    "duration_too_long": {
+      "message": "En timer kan højst køre i {days} dage."
     }
   },
   "selector": {

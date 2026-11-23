@@ -1,0 +1,6 @@
+pytest-homeassistant-custom-component
+# Requirements of the conversation and tts components the integration depends on.
+hassil
+home-assistant-intents
+gazetteer-matcher
+mutagen

@@ -67,7 +67,7 @@ async def async_setup_entry(
     platform.async_register_entity_service("pause_timer", TIMER_ID_SCHEMA, _by_id("async_pause"))
     platform.async_register_entity_service("unpause_timer", TIMER_ID_SCHEMA, _by_id("async_unpause"))
     platform.async_register_entity_service("cancel_timer", TIMER_ID_SCHEMA, _by_id("async_cancel"))
-    platform.async_register_entity_service("finish_timer", TIMER_ID_SCHEMA, _by_id("async_finish"))
+    platform.async_register_entity_service("finish_timer", TIMER_ID_SCHEMA, _async_finish_timer)
     platform.async_register_entity_service("remove_timer", TIMER_ID_SCHEMA, _by_id("async_remove"))
     platform.async_register_entity_service("add_time", DURATION_SCHEMA, _async_add_time)
     platform.async_register_entity_service("subtract_time", DURATION_SCHEMA, _async_subtract_time)
@@ -113,6 +113,10 @@ async def _async_create_timer(entity: TimerListSensor, call: ServiceCall) -> Ser
     return {ATTR_TIMER_ID: timer.timer_id}
 
 
+async def _async_finish_timer(entity: TimerListSensor, call: ServiceCall) -> None:
+    await entity.timer_list.async_finish(call.data[ATTR_TIMER_ID], user_id=call.context.user_id)
+
+
 async def _async_add_time(entity: TimerListSensor, call: ServiceCall) -> None:
     await entity.timer_list.async_add_time(call.data[ATTR_TIMER_ID], call.data[ATTR_DURATION])
 
@@ -122,7 +126,9 @@ async def _async_subtract_time(entity: TimerListSensor, call: ServiceCall) -> No
 
 
 async def _async_restart_timer(entity: TimerListSensor, call: ServiceCall) -> None:
-    await entity.timer_list.async_restart(call.data[ATTR_TIMER_ID], call.data.get(ATTR_DURATION))
+    await entity.timer_list.async_restart(
+        call.data[ATTR_TIMER_ID], call.data.get(ATTR_DURATION), user_id=call.context.user_id
+    )
 
 
 async def _async_get_timers(entity: TimerListSensor, call: ServiceCall) -> ServiceResponse:
