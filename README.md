@@ -18,6 +18,8 @@ cannot do by itself:
   the card, where you can pause, extend or cancel it. It works in every
   language Assist supports, and Assist answers exactly as before.
 
+<img width="1000" alt="Setting up an action when a timer ends in Simple Timer Card, and timers that will turn off a purifier and announce on a speaker" src="https://raw.githubusercontent.com/eyalgal/simple-timer-card/6e5e4266cb4d34e452a9cf3a1068eb160573fc23/assets/release-v3-actions.png" />
+
 ## Install
 
 ### Marketplace (fka HACS)
