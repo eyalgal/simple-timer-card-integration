@@ -15,7 +15,7 @@ from custom_components.simple_timer_card.const import DOMAIN
 PIPELINE = "custom_components.simple_timer_card.announce._preferred_pipeline"
 
 
-async def announce(hass: HomeAssistant, entity_id: str, message: str = "Pasta is done") -> None:
+async def announce(hass: HomeAssistant, entity_id: str, message: str = "Laundry is done") -> None:
     await hass.services.async_call(DOMAIN, "announce", {"entity_id": entity_id, "message": message}, blocking=True)
 
 
@@ -23,14 +23,14 @@ async def test_satellites_announce_natively(hass: HomeAssistant, entry) -> None:
     calls = async_mock_service(hass, "assist_satellite", "announce")
     await announce(hass, "assist_satellite.kitchen")
     assert calls[0].data["entity_id"] in ("assist_satellite.kitchen", ["assist_satellite.kitchen"])
-    assert calls[0].data["message"] == "Pasta is done"
+    assert calls[0].data["message"] == "Laundry is done"
 
 
 async def test_alexa_speakers_use_alexa_announce(hass: HomeAssistant, entry, entity_registry: er.EntityRegistry) -> None:
     calls = async_mock_service(hass, "notify", "alexa_media")
     echo = entity_registry.async_get_or_create("media_player", "alexa_media", "echo1", suggested_object_id="kitchen_echo")
     await announce(hass, echo.entity_id)
-    assert calls[0].data == {"message": "Pasta is done", "target": [echo.entity_id], "data": {"type": "announce"}}
+    assert calls[0].data == {"message": "Laundry is done", "target": [echo.entity_id], "data": {"type": "announce"}}
 
 
 async def test_other_speakers_use_the_pipeline_voice_and_skip_cloud_without_a_subscription(hass: HomeAssistant, entry) -> None:
