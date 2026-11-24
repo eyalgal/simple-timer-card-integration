@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 from typing import Any
 
@@ -67,18 +68,24 @@ async def async_command_is_understood(
     agent = async_get_agent(hass, agent_id)
     if agent is None or not isinstance(agent, default_agent.DefaultAgent):
         return True
-    test_input = ConversationInput(
-        text=command,
-        context=context or Context(),
-        conversation_id=None,
-        device_id=device_id,
-        satellite_id=None,
-        language=language or hass.config.language,
-        agent_id=agent.entity_id,
-    )
+    fields = {
+        "text": command,
+        "context": context or Context(),
+        "conversation_id": None,
+        "device_id": device_id,
+        "language": language or hass.config.language,
+        "agent_id": agent.entity_id,
+    }
+    # satellite_id is newer than some supported Home Assistant versions.
+    if "satellite_id" in {f.name for f in dataclasses.fields(ConversationInput)}:
+        fields["satellite_id"] = None
+    test_input = ConversationInput(**fields)
     if await agent.async_recognize_sentence_trigger(test_input) is not None:
         return True
-    return await agent.async_recognize_intent(test_input) is not None
+    result = await agent.async_recognize_intent(test_input)
+    # Older versions return partial matches ("no area named ...") instead of
+    # None; a command is only understood when everything in it matched.
+    return result is not None and not getattr(result, "unmatched_entities", None)
 
 
 async def async_build_action(

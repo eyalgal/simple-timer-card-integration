@@ -24,13 +24,19 @@ from .timers import TimerList
 _LOGGER = logging.getLogger(__name__)
 
 try:
-    from homeassistant.components.intent.timers import (
-        NoTimerCommandError,
-        StartTimerIntentHandler,
-    )
+    from homeassistant.components.intent.timers import StartTimerIntentHandler
 except ImportError:  # pragma: no cover - core layout changed
     StartTimerIntentHandler = None  # type: ignore[assignment,misc]
-    NoTimerCommandError = None  # type: ignore[assignment,misc]
+
+try:
+    from homeassistant.components.intent.timers import NoTimerCommandError
+except ImportError:  # Home Assistant before 2026.1
+
+    class NoTimerCommandError(intent.IntentHandleError):  # type: ignore[no-redef]
+        """The delayed command was not understood."""
+
+        def __init__(self, command: str) -> None:
+            super().__init__(f"Unknown command: {command}")
 
 
 def _find_handler(hass: HomeAssistant, intent_type: str) -> intent.IntentHandler | None:
@@ -60,7 +66,8 @@ if StartTimerIntentHandler is not None:
                 return await self.original.async_handle(intent_obj)
 
             slots = self.async_validate_slots(intent_obj.slots)
-            if not await self._validate_conversation_command(intent_obj, command):
+            validate = getattr(self, "_validate_conversation_command", None)
+            if validate is not None and not await validate(intent_obj, command):
                 raise NoTimerCommandError(command)
 
             def _int(key: str) -> int:

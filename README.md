@@ -38,7 +38,8 @@ Home Assistant `config/custom_components` folder, restart Home Assistant, then
 add **Simple Timer Card** under **Settings > Devices & services**.
 
 The integration creates one entity, `sensor.simple_timer_card_timers`, whose
-state is the number of running timers. It needs Home Assistant 2026.11 or later.
+state is the number of running timers. It needs Home Assistant 2025.6 or later;
+the integration icon shows from Home Assistant 2026.3.
 
 ## Options
 

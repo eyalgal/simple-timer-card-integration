@@ -1,6 +1,6 @@
 """Capturing delayed voice commands."""
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import intent
@@ -28,7 +28,7 @@ async def test_delayed_command_becomes_a_timer_and_the_handler_is_restored(hass:
         {"minutes": {"value": 10}, "conversation_command": {"value": "turn off the lights"}},
         "turn off the lights in 10 minutes", Context(user_id="abc"), "en",
     )
-    with patch.object(type(wrapper), "_validate_conversation_command", return_value=True):
+    with patch.object(type(wrapper), "_validate_conversation_command", new_callable=AsyncMock, return_value=True, create=True):
         await wrapper.async_handle(intent_obj)
 
     [timer] = timer_list.timers.values()

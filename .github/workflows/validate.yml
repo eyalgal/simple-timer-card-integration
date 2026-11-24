@@ -36,3 +36,26 @@ jobs:
           python-version: "3.14"
       - run: pip install -r requirements_test.txt
       - run: pytest -q
+
+  tests-minimum:
+    # Keep in step with "homeassistant" in hacs.json.
+    name: Tests (Home Assistant 2025.6)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install "pytest-homeassistant-custom-component==0.13.254" "pycares<5"
+      - name: Install the voice components' requirements for this version
+        run: |
+          python - <<'PY' > reqs.txt
+          import json, os, homeassistant
+          base = os.path.join(os.path.dirname(homeassistant.__file__), "components")
+          for name in ("conversation", "tts", "assist_satellite"):
+              path = os.path.join(base, name, "manifest.json")
+              if os.path.exists(path):
+                  print("\n".join(json.load(open(path)).get("requirements", [])))
+          PY
+          pip install -r reqs.txt
+      - run: pytest -q
