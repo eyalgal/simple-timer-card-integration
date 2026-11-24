@@ -90,7 +90,9 @@ such as Piper, and skips Home Assistant Cloud without an active subscription.
 `cancel_timer` stops a timer without running its action; `finish_timer` runs
 it now. Commands need the target entity to be exposed to Assist, as with any
 voice command. Actions run as the user who started the timer, so Home
-Assistant's permissions apply.
+Assistant's permissions apply. Snoozing or finishing someone else's timer
+does not change that. If another user finishes it early, the action runs
+only if they are allowed to run it too.
 
 ## Events
 

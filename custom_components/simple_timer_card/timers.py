@@ -162,7 +162,7 @@ class TimerItem:
         )
 
 
-ActionRunner = Callable[[HomeAssistant, TimerItem], Any]
+ActionRunner = Callable[[HomeAssistant, TimerItem, str | None], Any]
 
 
 class TimerList:
@@ -364,13 +364,15 @@ class TimerList:
         self._prune_archive()
 
     async def async_finish(self, timer_id: str, *, user_id: str | None = None) -> None:
-        """Finish a timer now, running its action as the user who finished it."""
+        """Finish a timer now.
+
+        The timer keeps its owner. The user who finished it must also be
+        allowed to run the action.
+        """
         timer = self._get(timer_id)
         if timer.status not in (TimerStatus.ACTIVE, TimerStatus.PAUSED):
             return
-        if user_id:
-            timer.user_id = user_id
-        self._finish(timer, run_action=True)
+        self._finish(timer, run_action=True, finished_by=user_id)
 
     async def async_add_time(self, timer_id: str, delta: timedelta) -> None:
         """Add (or with a negative delta, subtract) time."""
@@ -390,21 +392,16 @@ class TimerList:
         timer.total_duration = max(timer.total_duration, remaining)
         self._notify(TimerEventType.TIME_CHANGED, timer, delta.total_seconds())
 
-    async def async_restart(
-        self, timer_id: str, duration: timedelta | None = None, *, user_id: str | None = None
-    ) -> None:
-        """Run a timer again, keeping its name and action (used for snooze).
+    async def async_restart(self, timer_id: str, duration: timedelta | None = None) -> None:
+        """Run a timer again, keeping its name, action and owner (used for snooze).
 
-        The user who restarts it becomes its owner, so its action never runs
-        with someone else's rights. A cancelled timer stays cancelled.
+        A cancelled timer stays cancelled.
         """
         timer = self._get(timer_id)
         if timer.status == TimerStatus.CANCELLED:
             return
         length = duration or timer.created_duration
         self._check_duration(length)
-        if user_id:
-            timer.user_id = user_id
         now = dt_util.utcnow()
         timer.status = TimerStatus.ACTIVE
         timer.finishes_at = now + length
@@ -443,7 +440,9 @@ class TimerList:
             unsub()
 
     @callback
-    def _finish(self, timer: TimerItem, *, run_action: bool, ended_at: datetime | None = None) -> None:
+    def _finish(
+        self, timer: TimerItem, *, run_action: bool, ended_at: datetime | None = None, finished_by: str | None = None
+    ) -> None:
         self._unschedule(timer.timer_id)
         timer.status = TimerStatus.FINISHED
         timer.ended_at = ended_at or dt_util.utcnow()
@@ -451,12 +450,12 @@ class TimerList:
         timer.paused_remaining = None
         self._notify(TimerEventType.FINISHED, timer)
         if run_action and timer.action:
-            self.hass.async_create_background_task(self._async_run_action(timer), f"{DOMAIN} timer action {timer.timer_id}")
+            self.hass.async_create_background_task(self._async_run_action(timer, finished_by), f"{DOMAIN} timer action {timer.timer_id}")
         self._prune_archive()
 
-    async def _async_run_action(self, timer: TimerItem) -> None:
+    async def _async_run_action(self, timer: TimerItem, finished_by: str | None = None) -> None:
         try:
-            result = await self._action_runner(self.hass, timer)
+            result = await self._action_runner(self.hass, timer, finished_by)
         except (HomeAssistantError, ValueError) as err:
             result = f"error: {err}"
             _LOGGER.warning("Timer %s action failed: %s", timer.name or timer.timer_id, err)

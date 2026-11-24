@@ -126,9 +126,7 @@ async def _async_subtract_time(entity: TimerListSensor, call: ServiceCall) -> No
 
 
 async def _async_restart_timer(entity: TimerListSensor, call: ServiceCall) -> None:
-    await entity.timer_list.async_restart(
-        call.data[ATTR_TIMER_ID], call.data.get(ATTR_DURATION), user_id=call.context.user_id
-    )
+    await entity.timer_list.async_restart(call.data[ATTR_TIMER_ID], call.data.get(ATTR_DURATION))
 
 
 async def _async_get_timers(entity: TimerListSensor, call: ServiceCall) -> ServiceResponse:

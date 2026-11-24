@@ -8,6 +8,7 @@ from pytest_homeassistant_custom_component.common import MockUser, async_fire_ti
 from homeassistant.auth.const import GROUP_ID_ADMIN, GROUP_ID_USER
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers.service import async_register_admin_service
 from homeassistant.util import dt as dt_util
 
 from custom_components.simple_timer_card.const import DOMAIN, MAX_TIMERS
@@ -53,30 +54,59 @@ async def test_actions_are_skipped_when_the_owner_is_gone_or_demoted(hass: HomeA
     assert timers(hass, entry)[demoted].action_result.startswith("skipped")
 
 
-async def test_finishing_or_restarting_makes_you_the_owner(hass: HomeAssistant, entry) -> None:
+async def test_an_admin_finishing_a_timer_does_not_lend_their_rights(hass: HomeAssistant, entry) -> None:
+    calls = []
+
+    async def stop(call):
+        calls.append(call)
+
+    async_register_admin_service(hass, "test", "stop", stop)
+    admin = await user(hass, admin=True)
+    member = await user(hass, admin=False)
+    timer_id = await create(hass, Context(user_id=member.id), duration={"minutes": 5}, actions=[{"action": "test.stop"}])
+
+    for service in ("restart_timer", "finish_timer"):
+        await hass.services.async_call(
+            DOMAIN, service, {"entity_id": LIST, "timer_id": timer_id}, blocking=True, context=Context(user_id=admin.id)
+        )
+        await hass.async_block_till_done()
+        assert timers(hass, entry)[timer_id].user_id == member.id, f"{service} keeps the creator as the owner"
+    assert calls == []
+    assert timers(hass, entry)[timer_id].action_result.startswith("error")
+
+
+async def test_finishing_someone_elses_timer_needs_both_to_be_allowed(hass: HomeAssistant, entry) -> None:
+    calls = async_mock_service(hass, "test", "record")
     fired = []
     hass.bus.async_listen("tag_scanned", fired.append)
     admin = await user(hass, admin=True)
     member = await user(hass, admin=False)
-    timer_id = await create(hass, Context(user_id=admin.id), duration={"minutes": 5}, actions=EVENT)
+    script = await create(hass, Context(user_id=admin.id), duration={"minutes": 5}, actions=EVENT)
+    call = await create(hass, Context(user_id=admin.id), duration={"minutes": 5}, actions=CALL)
 
-    await hass.services.async_call(
-        DOMAIN, "finish_timer", {"entity_id": LIST, "timer_id": timer_id}, blocking=True, context=Context(user_id=member.id)
-    )
+    for timer_id in (script, call):
+        await hass.services.async_call(
+            DOMAIN, "finish_timer", {"entity_id": LIST, "timer_id": timer_id}, blocking=True, context=Context(user_id=member.id)
+        )
     await hass.async_block_till_done()
     assert fired == [], "a non-admin finishing an admin's script timer does not borrow the admin's rights"
-    assert timers(hass, entry)[timer_id].user_id == member.id
+    assert timers(hass, entry)[script].action_result.startswith("skipped: the user who finished it")
+    assert [c.context.user_id for c in calls] == [member.id], "the call runs with the less privileged user's rights"
+    assert timers(hass, entry)[script].user_id == admin.id
 
+    own = await create(hass, Context(user_id=admin.id), duration={"minutes": 5}, actions=EVENT)
     await hass.services.async_call(
-        DOMAIN, "restart_timer", {"entity_id": LIST, "timer_id": timer_id}, blocking=True, context=Context(user_id=admin.id)
+        DOMAIN, "finish_timer", {"entity_id": LIST, "timer_id": own}, blocking=True, context=Context(user_id=admin.id)
     )
-    assert timers(hass, entry)[timer_id].status == "active", "snooze restarts a finished timer"
-    assert timers(hass, entry)[timer_id].user_id == admin.id
+    await hass.async_block_till_done()
+    assert len(fired) == 1, "the owner can still finish their own timer early"
 
+
+async def test_restart_does_not_revive_a_cancelled_timer(hass: HomeAssistant, entry) -> None:
     cancelled = await create(hass, duration={"minutes": 5})
     await hass.services.async_call(DOMAIN, "cancel_timer", {"entity_id": LIST, "timer_id": cancelled}, blocking=True)
     await hass.services.async_call(DOMAIN, "restart_timer", {"entity_id": LIST, "timer_id": cancelled}, blocking=True)
-    assert timers(hass, entry)[cancelled].status == "cancelled", "restart does not revive a cancelled timer"
+    assert timers(hass, entry)[cancelled].status == "cancelled"
 
 
 async def test_service_data_stays_on_the_server(hass: HomeAssistant, entry) -> None:

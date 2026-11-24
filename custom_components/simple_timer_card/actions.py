@@ -135,15 +135,40 @@ async def async_build_action(
     return None
 
 
-async def async_run_action(hass: HomeAssistant, timer: TimerItem) -> str:
-    """Run a finished timer's action as the user who created it."""
+async def _async_run_as(hass: HomeAssistant, owner_id: str | None, finished_by: str | None) -> str | None:
+    """The user whose rights the action runs with.
+
+    The creator owns the action. When someone else finishes the timer, it
+    runs with the rights of the less privileged of the two, so finishing a
+    timer never lends anyone's rights to someone else.
+    """
+    if not finished_by or finished_by == owner_id:
+        return owner_id
+    if owner_id is None:
+        return finished_by
+    owner = await hass.auth.async_get_user(owner_id)
+    presser = await hass.auth.async_get_user(finished_by)
+    if owner is not None and owner.is_admin and presser is not None and not presser.is_admin:
+        return finished_by
+    return owner_id
+
+
+async def async_run_action(hass: HomeAssistant, timer: TimerItem, finished_by: str | None = None) -> str:
+    """Run a finished timer's action as the user who created it.
+
+    If another user finished it early, they must be allowed to run it too.
+    """
     action = timer.action or {}
+    steps = action.get("actions") if action.get("type") == "actions" else None
     # Checked again when it runs: the owner may have been removed or demoted.
-    denied = await async_action_denied(hass, timer.user_id, action.get("actions") if action.get("type") == "actions" else None)
+    denied = await async_action_denied(hass, timer.user_id, steps)
+    if not denied and finished_by and finished_by != timer.user_id:
+        if reason := await async_action_denied(hass, finished_by, steps):
+            denied = f"the user who finished it may not run it ({reason})"
     if denied:
         _LOGGER.warning("Timer %s action skipped: %s", timer.name or timer.timer_id, denied)
         return f"skipped: {denied}"
-    context = Context(user_id=timer.user_id)
+    context = Context(user_id=await _async_run_as(hass, timer.user_id, finished_by))
     if action.get("type") == "command":
         from homeassistant.components.conversation import async_converse  # noqa: PLC0415
 
