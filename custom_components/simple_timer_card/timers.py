@@ -374,15 +374,18 @@ class TimerList:
             return
         self._finish(timer, run_action=True, finished_by=user_id)
 
-    async def async_add_time(self, timer_id: str, delta: timedelta) -> None:
-        """Add (or with a negative delta, subtract) time."""
+    async def async_add_time(self, timer_id: str, delta: timedelta, *, user_id: str | None = None) -> None:
+        """Add (or with a negative delta, subtract) time.
+
+        Subtracting past zero finishes the timer as `user_id`, like async_finish.
+        """
         timer = self._get(timer_id)
         if timer.status not in (TimerStatus.ACTIVE, TimerStatus.PAUSED) or not delta:
             return
         now = dt_util.utcnow()
         remaining = timer.remaining_at(now) + delta
         if remaining.total_seconds() <= 0:
-            self._finish(timer, run_action=True)
+            self._finish(timer, run_action=True, finished_by=user_id)
             return
         if timer.status == TimerStatus.ACTIVE:
             timer.finishes_at = now + remaining

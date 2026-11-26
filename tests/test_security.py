@@ -84,13 +84,19 @@ async def test_finishing_someone_elses_timer_needs_both_to_be_allowed(hass: Home
     script = await create(hass, Context(user_id=admin.id), duration={"minutes": 5}, actions=EVENT)
     call = await create(hass, Context(user_id=admin.id), duration={"minutes": 5}, actions=CALL)
 
+    subtracted = await create(hass, Context(user_id=admin.id), duration={"minutes": 5}, actions=EVENT)
     for timer_id in (script, call):
         await hass.services.async_call(
             DOMAIN, "finish_timer", {"entity_id": LIST, "timer_id": timer_id}, blocking=True, context=Context(user_id=member.id)
         )
+    await hass.services.async_call(
+        DOMAIN, "subtract_time", {"entity_id": LIST, "timer_id": subtracted, "duration": {"minutes": 10}},
+        blocking=True, context=Context(user_id=member.id),
+    )
     await hass.async_block_till_done()
     assert fired == [], "a non-admin finishing an admin's script timer does not borrow the admin's rights"
     assert timers(hass, entry)[script].action_result.startswith("skipped: the user who finished it")
+    assert timers(hass, entry)[subtracted].action_result.startswith("skipped: the user who finished it"), "so does subtract_time"
     assert [c.context.user_id for c in calls] == [member.id], "the call runs with the less privileged user's rights"
     assert timers(hass, entry)[script].user_id == admin.id
 
