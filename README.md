@@ -24,13 +24,12 @@ cannot do by itself:
 
 ### Marketplace (fka HACS)
 
-1. In Home Assistant, open **Marketplace (fka HACS)**, then the menu
-   **⋮ > Custom repositories**.
-2. Add `https://github.com/eyalgal/simple-timer-card-integration` as an
-   **Integration**.
-3. Find **Simple Timer Card Integration**, download it, and restart Home
-   Assistant.
-4. Go to **Settings > Devices & services > Add integration** and pick
+[![Open the integration in Marketplace (fka HACS)](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=eyalgal&repository=simple-timer-card-integration&category=integration)
+
+1. In Home Assistant, open **Marketplace (fka HACS)** and search for
+   **Simple Timer Card Integration**, or use the button above.
+2. Download it and restart Home Assistant.
+3. Go to **Settings > Devices & services > Add integration** and pick
    **Simple Timer Card**.
 
 ### Manually
